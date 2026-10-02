@@ -206,6 +206,95 @@ resource "kubernetes_limit_range_v1" "plant-res" {
   }
 }
 
+resource "kubernetes_config_map_v1" "mosquitto-config" {
+  metadata {
+    name      = "mosquitto-config"
+    namespace = kubernetes_namespace_v1.plant-res.metadata[0].name
+  }
+
+  data = {
+    "mosquitto.conf" = <<-EOT
+      listener 1883 0.0.0.0
+      allow_anonymous true
+      persistence false
+    EOT
+  }
+}
+
+resource "kubernetes_deployment_v1" "mosquitto" {
+  metadata {
+    name      = "mosquitto"
+    namespace = kubernetes_namespace_v1.plant-res.metadata[0].name
+    labels = {
+      app = "mosquitto"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "mosquitto"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "mosquitto"
+        }
+      }
+
+      spec {
+        container {
+          name  = "mosquitto"
+          image = "eclipse-mosquitto:2"
+
+          port {
+            container_port = 1883
+          }
+
+          volume_mount {
+            name       = "config"
+            mount_path = "/mosquitto/config/mosquitto.conf"
+            sub_path   = "mosquitto.conf"
+          }
+        }
+
+        volume {
+          name = "config"
+          config_map {
+            name = kubernetes_config_map_v1.mosquitto-config.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service_v1" "mosquitto" {
+  metadata {
+    name      = "mosquitto"
+    namespace = kubernetes_namespace_v1.plant-res.metadata[0].name
+  }
+
+  spec {
+    selector = {
+      app = "mosquitto"
+    }
+
+    port {
+      name        = "mqtt"
+      port        = 1883
+      target_port = 1883
+      protocol    = "TCP"
+    }
+
+    type = "ClusterIP"
+  }
+}
+
 resource "kubernetes_deployment_v1" "plant-res" {
   metadata {
     name      = var.deployment_name
@@ -252,9 +341,20 @@ resource "kubernetes_deployment_v1" "plant-res" {
         container {
           name  = "zigbee2mqtt"
           image = var.zigbee2mqtt_image
+
+          security_context {
+            privileged = true
+            run_as_user = 0
+          }
+
           env {
             name  = "TZ"
             value = "Europe/Amsterdam"
+          }
+
+          env {
+            name  = "ZIGBEE2MQTT_CONFIG_MQTT_SERVER"
+            value = "mqtt://mosquitto:1883"
           }
 
           volume_mount {
@@ -270,7 +370,7 @@ resource "kubernetes_deployment_v1" "plant-res" {
 
           volume_mount {
             name       = "usb-device"
-            mount_path = "/dev/ttyACM0"
+            mount_path = "/dev/ttyUSB0"
           }
 
           port {
@@ -293,9 +393,9 @@ resource "kubernetes_deployment_v1" "plant-res" {
               path = "/"
               port = 8080
             }
-            initial_delay_seconds = 30
-            failure_threshold = 30
-            period_seconds    = 10
+            initial_delay_seconds = 60
+            failure_threshold = 60
+            period_seconds    = 5
           }
 
           liveness_probe {
@@ -303,8 +403,9 @@ resource "kubernetes_deployment_v1" "plant-res" {
               path = "/"
               port = 8080
             }
-            initial_delay_seconds = 10
-            period_seconds        = 10
+            initial_delay_seconds = 120
+            period_seconds        = 30
+            failure_threshold = 3
           }
 
           readiness_probe {
