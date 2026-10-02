@@ -45,12 +45,12 @@ Using a host-level Kubernetes runtime (instead of Docker driver) provides more d
 
 ```mermaid
 flowchart LR
-    A[USB Zigbee Dongle<br/>/dev/serial/by-id/... -> /dev/ttyUSB0] --> B[Zigbee2MQTT Pod]
-    C[/data/zigbee2mqtt<br/>hostPath persistence] --> B
+    A[USB Zigbee Dongle<br/>serial by id to /dev/ttyUSB0] --> B[Zigbee2MQTT Pod]
+    C[Path /data/zigbee2mqtt<br/>hostPath persistence] --> B
     B --> D[Mosquitto Service<br/>mqtt://mosquitto:1883]
     D --> E[Mosquitto Pod]
-    B --> F[Kubernetes Service NodePort<br/>:30080 -> :8080]
-    F --> G[Browser UI<br/>http://<host-ip>:30080]
+    B --> F[Kubernetes Service NodePort<br/>30080 to 8080]
+    F --> G[Browser UI<br/>http://host-ip:30080]
 ```
 
 ## Runtime Behavior
