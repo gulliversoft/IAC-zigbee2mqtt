@@ -1,3 +1,22 @@
+#############################################
+# Project Metadata
+# Author: Gulliversoft
+# Year: 2026
+# Website: https://www.gulliversoft.com/
+# GitHub: https://github.com/gulliversoft
+# Home automation projects:
+# - https://github.com/gulliversoft/IAC-zigbee2mqtt
+# - https://github.com/gulliversoft/Optomat
+#
+# About Gulliversoft:
+# Gulliversoft builds practical, hardware-near automation solutions and
+# reproducible Kubernetes/Terraform deployments focused on reliability,
+# maintainability, and real-world operations.
+#
+# License: MIT
+# Copyright (c) 2026 Gulliversoft
+#############################################
+
 terraform {
   required_providers {
     kubernetes = {
